@@ -1,0 +1,56 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   variables.css — design tokens.
+   Every colour, font, and sizing value lives here. Nothing else imports raw values.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+:root {
+  /* Palette — dark (default) */
+  --bg:       #080b0f;
+  --surface:  #0d1117;
+  --surface2: #131920;
+  --surface3: #1a2330;
+  --border:   #1e2d3d;
+  --border2:  #243447;
+
+  --accent:  #00d4aa;
+  --accent2: #0088ff;
+  --accent3: #ff6b35;
+  --green:   #00d4aa;
+  --red:     #ff4444;
+  --yellow:  #f5c518;
+  --purple:  #a78bfa;
+
+  --text:  #c9d1d9;
+  --text2: #8b949e;
+  --text3: #4d5966;
+
+  --shadow:    0 4px 24px rgba(0, 0, 0, 0.4);
+  --mono:      'Space Mono', monospace;
+  --sans:      'DM Sans', sans-serif;
+  --topbar-h:  44px;
+  --radius:    2px;
+  --transition: 0.15s ease;
+}
+
+html[data-theme="light"] {
+  --bg:       #f0f4f8;
+  --surface:  #ffffff;
+  --surface2: #f7f9fc;
+  --surface3: #edf2f7;
+  --border:   #d1dde8;
+  --border2:  #b8ccd9;
+
+  --accent:  #00a885;
+  --accent2: #0066cc;
+  --accent3: #e05a2a;
+  --green:   #059669;
+  --red:     #dc2626;
+  --yellow:  #d97706;
+  --purple:  #7c3aed;
+
+  --text:  #1a2332;
+  --text2: #4a5568;
+  --text3: #8a9bb0;
+
+  --shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+}

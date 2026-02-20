@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ORACLE // Market Intelligence</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ── THEME VARIABLES ─────────────────────────────────────────────────────── */
+:root {
+  --bg: #080b0f; --surface: #0d1117; --surface2: #131920; --surface3: #1a2330;
+  --border: #1e2d3d; --border2: #243447;
+  --accent: #00d4aa; --accent2: #0088ff; --accent3: #ff6b35;
+  --red: #ff4444; --green: #00d4aa; --yellow: #f5c518; --purple: #a78bfa;
+  --text: #c9d1d9; --text2: #8b949e; --text3: #4d5966;
+  --shadow: 0 4px 24px rgba(0,0,0,0.4);
+  --mono: 'Space Mono', monospace; --sans: 'DM Sans', sans-serif;
+  --topbar-h: 44px;
+}
+html[data-theme="light"] {
+  --bg: #f0f4f8; --surface: #ffffff; --surface2: #f7f9fc; --surface3: #edf2f7;
+  --border: #d1dde8; --border2: #b8ccd9;
+  --accent: #00a885; --accent2: #0066cc; --accent3: #e05a2a;
+  --red: #dc2626; --green: #059669; --yellow: #d97706; --purple: #7c3aed;
+  --text: #1a2332; --text2: #4a5568; --text3: #8a9bb0;
+  --shadow: 0 4px 24px rgba(0,0,0,0.08);
+}
+
+/* ── RESET ───────────────────────────────────────────────────────────────── */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: var(--bg); color: var(--text); font-family: var(--sans); height: 100vh; overflow: hidden; display: flex; flex-direction: column; transition: background 0.2s, color 0.2s; }
+
+/* ── TOPBAR ──────────────────────────────────────────────────────────────── */
+#topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 16px; height: var(--topbar-h);
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  flex-shrink: 0; z-index: 200; gap: 12px;
+}
+.logo {
+  font-family: var(--mono); font-size: 13px; font-weight: 700;
+  letter-spacing: 0.2em; color: var(--accent);
+  display: flex; align-items: center; gap: 8px; white-space: nowrap;
+}
+.logo-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--accent); box-shadow: 0 0 8px var(--accent);
+  animation: pulse 2s infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1}50%{opacity:.35} }
+
+.topbar-mid { display: flex; align-items: center; gap: 8px; flex: 1; justify-content: center; }
+
+.alert-banner {
+  display: none; align-items: center; gap: 8px;
+  background: rgba(255,107,53,0.12); border: 1px solid var(--accent3);
+  padding: 4px 12px; font-family: var(--mono); font-size: 10px;
+  color: var(--accent3); letter-spacing: 0.08em; animation: alertFlash 1s infinite;
+}
+.alert-banner.visible { display: flex; }
+@keyframes alertFlash { 0%,100%{opacity:1}50%{opacity:.6} }
+
+.topbar-right { display: flex; align-items: center; gap: 10px; }
+#live-time { font-family: var(--mono); font-size: 11px; color: var(--text3); }
+#last-updated { font-family: var(--mono); font-size: 10px; color: var(--text3); white-space: nowrap; }
+
+.icon-btn {
+  background: transparent; border: 1px solid var(--border2); color: var(--text2);
+  font-family: var(--mono); font-size: 10px; padding: 4px 9px; cursor: pointer;
+  letter-spacing: 0.08em; transition: all .15s; white-space: nowrap;
+}
+.icon-btn:hover { border-color: var(--accent); color: var(--accent); }
+.icon-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+/* ── LAYOUT ──────────────────────────────────────────────────────────────── */
+#main { display: grid; grid-template-columns: 290px 1fr 280px; flex: 1; overflow: hidden; }
+
+/* ── PANEL ───────────────────────────────────────────────────────────────── */
+.panel { background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+.panel:last-child { border-right: none; border-left: 1px solid var(--border); }
+
+.panel-header { padding: 9px 13px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.panel-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.tab-btn {
+  flex: 1; padding: 8px 4px; background: transparent; border: none; border-bottom: 2px solid transparent;
+  color: var(--text3); font-family: var(--mono); font-size: 9px; letter-spacing: 0.15em;
+  cursor: pointer; transition: all .15s; text-transform: uppercase;
+}
+.tab-btn.active { color: var(--accent2); border-bottom-color: var(--accent2); }
+.tab-btn:hover:not(.active) { color: var(--text2); }
+
+.panel-title { font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: 0.18em; color: var(--text3); text-transform: uppercase; flex: 1; }
+.badge { background: var(--accent3); color: #fff; font-family: var(--mono); font-size: 8px; font-weight: 700; padding: 1px 5px; border-radius: 1px; }
+.badge.blue { background: var(--accent2); }
+.badge.green { background: var(--green); color: #000; }
+
+.panel-search { display: flex; gap: 6px; padding: 8px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.panel-search input {
+  flex: 1; background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+  font-family: var(--mono); font-size: 10px; padding: 5px 8px; outline: none; transition: border .15s;
+}
+.panel-search input:focus { border-color: var(--accent2); }
+.panel-search input::placeholder { color: var(--text3); }
+.panel-search button {
+  background: var(--surface2); border: 1px solid var(--border); color: var(--text2);
+  font-family: var(--mono); font-size: 10px; padding: 5px 9px; cursor: pointer; transition: all .15s;
+}
+.panel-search button:hover { border-color: var(--accent2); color: var(--accent2); }
+
+.panel-body { flex: 1; overflow-y: auto; padding: 8px; }
+.panel-body::-webkit-scrollbar { width: 3px; }
+.panel-body::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+/* ── TAB CONTENT ─────────────────────────────────────────────────────────── */
+.tab-content { display: none; flex-direction: column; flex: 1; overflow: hidden; }
+.tab-content.active { display: flex; }
+
+/* ── MARKET CARD ─────────────────────────────────────────────────────────── */
+.market-card {
+  background: var(--surface2); border: 1px solid var(--border);
+  padding: 10px 12px; margin-bottom: 6px; cursor: pointer;
+  transition: border-color .15s, box-shadow .15s; animation: fadeUp .25s ease;
+}
+.market-card:hover { border-color: var(--border2); box-shadow: var(--shadow); }
+@keyframes fadeUp { from{opacity:0;transform:translateY(5px)} to{opacity:1;transform:translateY(0)} }
+
+.market-source-tag {
+  font-family: var(--mono); font-size: 8px; letter-spacing: 0.15em;
+  padding: 1px 5px; border-radius: 1px; margin-bottom: 6px; display: inline-block;
+}
+.source-poly { background: rgba(0,136,255,0.15); color: var(--accent2); }
+.source-kalshi { background: rgba(167,139,250,0.15); color: var(--purple); }
+
+.market-q { font-size: 11px; color: var(--text); line-height: 1.45; margin-bottom: 7px; }
+.market-vol { font-family: var(--mono); font-size: 9px; color: var(--text3); margin-bottom: 7px; }
+.market-vol span { color: var(--yellow); }
+
+.prob-bars { display: flex; flex-direction: column; gap: 5px; }
+.prob-row { display: flex; flex-direction: column; gap: 2px; }
+.prob-label-row { display: flex; justify-content: space-between; }
+.prob-label { font-family: var(--mono); font-size: 9px; color: var(--text2); }
+.prob-pct { font-family: var(--mono); font-size: 9px; font-weight: 700; }
+.prob-pct.hi { color: var(--green); } .prob-pct.lo { color: var(--red); } .prob-pct.mi { color: var(--yellow); }
+.prob-bar-track { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.prob-bar-fill { height: 100%; border-radius: 2px; transition: width .7s ease; }
+.fill-yes { background: var(--green); } .fill-no { background: var(--red); } .fill-other { background: var(--accent2); }
+
+.market-link { font-family: var(--mono); font-size: 9px; color: var(--text3); text-decoration: none; display: inline-block; margin-top: 6px; transition: color .15s; }
+.market-link:hover { color: var(--accent2); }
+
+/* ── NEWS CARD ───────────────────────────────────────────────────────────── */
+.news-card { border-bottom: 1px solid var(--border); padding: 9px 4px; animation: fadeUp .25s ease; }
+.news-meta { font-family: var(--mono); font-size: 9px; color: var(--accent2); display: flex; justify-content: space-between; margin-bottom: 4px; }
+.news-date { color: var(--text3); }
+.news-title { font-size: 12px; color: var(--text); line-height: 1.5; text-decoration: none; display: block; transition: color .15s; }
+.news-title:hover { color: var(--accent); }
+
+/* ── ALERTS PANEL ────────────────────────────────────────────────────────── */
+.alert-form { padding: 10px 12px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 7px; flex-shrink: 0; }
+.alert-form-title { font-family: var(--mono); font-size: 9px; color: var(--text3); letter-spacing: 0.15em; }
+.alert-row { display: flex; gap: 6px; }
+.alert-input {
+  flex: 1; background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+  font-family: var(--mono); font-size: 9px; padding: 5px 7px; outline: none; min-width: 0;
+}
+.alert-input:focus { border-color: var(--accent3); }
+.alert-input::placeholder { color: var(--text3); }
+.alert-select {
+  background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+  font-family: var(--mono); font-size: 9px; padding: 5px 6px; outline: none; cursor: pointer;
+}
+.btn-add-alert {
+  background: var(--accent3); border: none; color: #fff; font-family: var(--mono);
+  font-size: 9px; font-weight: 700; padding: 5px 10px; cursor: pointer; letter-spacing: 0.1em; transition: opacity .15s;
+}
+.btn-add-alert:hover { opacity: .85; }
+
+.alert-card {
+  background: var(--surface2); border: 1px solid var(--border); padding: 8px 10px;
+  margin-bottom: 5px; display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;
+  animation: fadeUp .25s ease;
+}
+.alert-card.fired { border-color: var(--accent3); background: rgba(255,107,53,.06); }
+.alert-info { flex: 1; min-width: 0; }
+.alert-question { font-size: 10px; color: var(--text); margin-bottom: 3px; line-height: 1.35; }
+.alert-meta { font-family: var(--mono); font-size: 9px; color: var(--text3); }
+.alert-meta .fired-tag { color: var(--accent3); font-weight: 700; }
+.btn-del-alert { background: transparent; border: none; color: var(--text3); font-size: 14px; cursor: pointer; padding: 0 3px; transition: color .15s; flex-shrink: 0; }
+.btn-del-alert:hover { color: var(--red); }
+
+/* ── CHAT ────────────────────────────────────────────────────────────────── */
+#chat-panel { display: flex; flex-direction: column; background: var(--bg); overflow: hidden; }
+#chat-header { padding: 9px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; background: var(--surface); }
+.chat-title { font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: 0.18em; color: var(--text3); text-transform: uppercase; }
+.btn-clear { font-family: var(--mono); font-size: 9px; letter-spacing: 0.1em; background: transparent; border: 1px solid var(--border); color: var(--text3); padding: 3px 8px; cursor: pointer; transition: all .15s; }
+.btn-clear:hover { border-color: var(--red); color: var(--red); }
+
+#messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+#messages::-webkit-scrollbar { width: 3px; }
+#messages::-webkit-scrollbar-thumb { background: var(--border2); }
+
+.msg { display: flex; flex-direction: column; max-width: 88%; animation: msgIn .2s ease; }
+@keyframes msgIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+.msg.user { align-self: flex-end; align-items: flex-end; }
+.msg.bot  { align-self: flex-start; align-items: flex-start; }
+.msg-label { font-family: var(--mono); font-size: 9px; color: var(--text3); letter-spacing: 0.1em; margin-bottom: 4px; }
+.msg.user .msg-label { color: var(--accent2); }
+.msg-bubble { padding: 10px 14px; font-size: 13px; line-height: 1.65; border-radius: 2px; white-space: pre-wrap; }
+.msg.user .msg-bubble { background: rgba(0,136,255,.1); border: 1px solid rgba(0,136,255,.25); border-radius: 2px 2px 0 2px; }
+.msg.bot  .msg-bubble { background: var(--surface2); border: 1px solid var(--border); border-radius: 2px 2px 2px 0; }
+
+.typing-indicator { display: flex; align-items: center; gap: 4px; padding: 12px 14px; background: var(--surface2); border: 1px solid var(--border); }
+.typing-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--accent); animation: bounce 1.2s infinite; }
+.typing-dot:nth-child(2){animation-delay:.2s} .typing-dot:nth-child(3){animation-delay:.4s}
+@keyframes bounce { 0%,80%,100%{transform:translateY(0);opacity:.4} 40%{transform:translateY(-5px);opacity:1} }
+
+/* ── WELCOME ─────────────────────────────────────────────────────────────── */
+#welcome { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; color: var(--text3); font-family: var(--mono); text-align: center; gap: 6px; padding: 24px; }
+#welcome h2 { font-size: 13px; letter-spacing: 0.25em; color: var(--text2); margin-bottom: 4px; }
+#welcome p { font-size: 10px; line-height: 1.8; max-width: 320px; }
+.suggestions { display: flex; flex-direction: column; gap: 5px; margin-top: 14px; width: 100%; max-width: 380px; }
+.suggestion-btn { background: var(--surface2); border: 1px solid var(--border); color: var(--text2); font-family: var(--mono); font-size: 10px; padding: 8px 12px; cursor: pointer; text-align: left; transition: all .15s; letter-spacing: .03em; }
+.suggestion-btn:hover { border-color: var(--accent2); color: var(--accent2); }
+
+/* ── INPUT ───────────────────────────────────────────────────────────────── */
+#input-area { padding: 10px 14px; border-top: 1px solid var(--border); background: var(--surface); flex-shrink: 0; }
+.input-row { display: flex; gap: 7px; align-items: flex-end; }
+#user-input {
+  flex: 1; background: var(--surface2); border: 1px solid var(--border2); color: var(--text);
+  font-family: var(--sans); font-size: 13px; padding: 9px 13px; resize: none; outline: none;
+  transition: border-color .15s; min-height: 40px; max-height: 120px; line-height: 1.4;
+}
+#user-input:focus { border-color: var(--accent2); }
+#user-input::placeholder { color: var(--text3); }
+#send-btn { background: var(--accent2); border: none; color: #fff; font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: .1em; padding: 9px 15px; cursor: pointer; transition: all .15s; height: 40px; white-space: nowrap; }
+#send-btn:hover { filter: brightness(1.15); }
+#send-btn:disabled { background: var(--border); cursor: not-allowed; filter: none; }
+.input-hint { font-family: var(--mono); font-size: 9px; color: var(--text3); margin-top: 5px; }
+
+/* ── LOADING ─────────────────────────────────────────────────────────────── */
+.shimmer { background: linear-gradient(90deg,var(--surface2) 25%,var(--border) 50%,var(--surface2) 75%); background-size:200% 100%; animation: shimmer 1.4s infinite; height: 80px; margin-bottom: 6px; }
+@keyframes shimmer { to{background-position:-200% 0} }
+.empty-state { display:flex; flex-direction:column; align-items:center; justify-content:center; height:80px; color:var(--text3); font-family:var(--mono); font-size:10px; gap:6px; }
+
+/* SPARKLINE */
+.delta { font-family: var(--mono); font-size: 9px; font-weight: 700; margin-left: 4px; }
+.delta.up { color: var(--green); } .delta.down { color: var(--red); } .delta.flat { color: var(--text3); }
+
+/* WATCHLIST PIN */
+.market-actions { display: flex; align-items: center; justify-content: space-between; margin-top: 6px; }
+.btn-pin { background: transparent; border: none; font-size: 11px; cursor: pointer; opacity: 0.35; transition: opacity .15s; padding: 0; line-height: 1; }
+.btn-pin:hover, .btn-pin.pinned { opacity: 1; }
+.market-card.pinned-card { border-left: 2px solid var(--yellow); }
+
+/* HEALTH */
+#health-dots { display: flex; align-items: center; gap: 6px; }
+.hdot { width: 7px; height: 7px; border-radius: 50%; background: var(--text3); cursor: help; flex-shrink: 0; }
+.hdot.ok { background: var(--green); box-shadow: 0 0 5px var(--green); }
+.hdot.warn { background: var(--yellow); }
+.hdot.err { background: var(--red); box-shadow: 0 0 5px var(--red); }
+
+/* ── SPARKLINE DELTA ── */
+.delta { font-family: var(--mono); font-size: 9px; font-weight: 700; margin-left: 4px; }
+.delta.up { color: var(--green); } .delta.down { color: var(--red); } .delta.flat { color: var(--text3); }
+/* ── WATCHLIST PIN ── */
+.market-actions { display: flex; align-items: center; justify-content: space-between; margin-top: 6px; }
+.btn-pin { background: transparent; border: none; font-size: 12px; cursor: pointer; opacity: 0.35; transition: opacity .15s; padding: 0; line-height:1; }
+.btn-pin:hover, .btn-pin.pinned { opacity: 1; }
+.market-card.pinned-card { border-left: 2px solid var(--yellow); }
+/* ── HEALTH DOTS ── */
+#health-dots { display: flex; align-items: center; gap: 6px; }
+.hdot { width: 7px; height: 7px; border-radius: 50%; background: var(--text3); cursor: help; flex-shrink: 0; transition: background .3s; }
+.hdot.ok { background: var(--green); box-shadow: 0 0 5px var(--green); }
+.hdot.warn { background: var(--yellow); }
+.hdot.err { background: var(--red); box-shadow: 0 0 5px var(--red); }
+
+/* ── RSS / SHIFTS / CALENDAR ─────────────────────────────────────────────── */
+.rss-card { border-bottom: 1px solid var(--border); padding: 9px 4px; animation: fadeUp .25s ease; }
+.rss-meta { font-family: var(--mono); font-size: 9px; display: flex; justify-content: space-between; margin-bottom: 3px; }
+.rss-source { color: var(--purple); }
+.rss-date   { color: var(--text3); }
+.rss-title  { font-size: 12px; color: var(--text); text-decoration: none; display: block; line-height: 1.5; transition: color .15s; }
+.rss-title:hover { color: var(--accent); }
+
+.shift-card { background: var(--surface2); border: 1px solid var(--border); padding: 8px 12px; margin-bottom: 5px; animation: fadeUp .25s ease; display: flex; align-items: center; gap: 10px; }
+.shift-card.up   { border-left: 3px solid var(--green); }
+.shift-card.down { border-left: 3px solid var(--red); }
+.shift-arrow { font-size: 16px; flex-shrink: 0; }
+.shift-info { flex: 1; min-width: 0; }
+.shift-market { font-size: 11px; color: var(--text); line-height: 1.35; margin-bottom: 3px; }
+.shift-meta { font-family: var(--mono); font-size: 9px; color: var(--text3); }
+.shift-prob { font-family: var(--mono); font-size: 11px; font-weight: 700; flex-shrink: 0; }
+.shift-prob.up   { color: var(--green); }
+.shift-prob.down { color: var(--red); }
+
+.cal-card { border-bottom: 1px solid var(--border); padding: 9px 4px; display: flex; align-items: center; gap: 10px; }
+.cal-card.past { opacity: 0.45; }
+.cal-icon  { font-size: 16px; flex-shrink: 0; }
+.cal-info  { flex: 1; }
+.cal-title { font-size: 11px; color: var(--text); margin-bottom: 2px; }
+.cal-meta  { font-family: var(--mono); font-size: 9px; color: var(--text3); display: flex; gap: 8px; }
+.cal-label { font-weight: 700; }
+.cal-label.high   { color: var(--red); }
+.cal-label.medium { color: var(--yellow); }
+.cal-label.low    { color: var(--text3); }
+
+.btn-rabbithole {
+  font-family: var(--mono); font-size: 9px; letter-spacing: 0.08em;
+  background: rgba(167,139,250,.12); border: 1px solid rgba(167,139,250,.3);
+  color: var(--purple); padding: 3px 7px; cursor: pointer; transition: all .15s;
+  white-space: nowrap;
+}
+.btn-rabbithole:hover { background: rgba(167,139,250,.25); border-color: var(--purple); }
+
+/* Reddit sentiment badge */
+.sentiment { font-family: var(--mono); font-size: 8px; font-weight: 700; padding: 1px 5px; border-radius: 1px; }
+.sentiment.bullish { background: rgba(0,212,170,.15); color: var(--green); }
+.sentiment.bearish { background: rgba(255,68,68,.15); color: var(--red); }
+.sentiment.neutral { background: rgba(139,148,158,.15); color: var(--text3); }
+
+.reddit-card { border-bottom: 1px solid var(--border); padding: 8px 4px; }
+.reddit-meta { font-family: var(--mono); font-size: 9px; color: var(--text3); margin-bottom: 3px; display: flex; justify-content: space-between; align-items: center; }
+.reddit-title { font-size: 11px; color: var(--text); text-decoration: none; display: block; line-height: 1.45; transition: color .15s; }
+.reddit-title:hover { color: var(--accent); }
+
+</style>
+</head>
+<body>
+
+<!-- ── TOPBAR ── -->
+<div id="topbar">
+  <div class="logo"><div class="logo-dot"></div>ORACLE</div>
+
+  <div class="topbar-mid">
+    <div class="alert-banner" id="alert-banner">⚠ ALERT TRIGGERED</div>
+  </div>
+
+  <div class="topbar-right">
+    <div id="health-dots" title="System health">
+      <div class="hdot" id="h-ollama" title="Ollama"></div>
+      <div class="hdot" id="h-news" title="NewsAPI"></div>
+      <div class="hdot" id="h-poly" title="Polymarket"></div>
+      <div class="hdot" id="h-kalshi" title="Kalshi"></div>
+    </div>
+    <span id="last-updated"></span>
+    <span id="live-time"></span>
+    <button class="icon-btn" onclick="exportChat()">↓ EXPORT</button>
+    <button class="icon-btn" id="refresh-btn" onclick="refreshData()">⟳ REFRESH</button>
+    <button class="icon-btn" id="theme-btn" onclick="toggleTheme()">◑ LIGHT</button>
+  </div>
+</div>
+
+<!-- ── MAIN ── -->
+<div id="main">
+
+  <!-- LEFT: Markets + Alerts -->
+  <div class="panel">
+    <div class="panel-tabs">
+      <button class="tab-btn active" onclick="switchLeftTab('markets', this)">MARKETS</button>
+      <button class="tab-btn" onclick="switchLeftTab('kalshi', this)">KALSHI</button>
+      <button class="tab-btn" onclick="switchLeftTab('alerts', this)">ALERTS <span id="alert-count-tab"></span></button>
+    </div>
+
+    <!-- Polymarket tab -->
+    <div class="tab-content active" id="tab-markets">
+      <div class="panel-search">
+        <input type="text" id="market-search" placeholder="Search Polymarket..." onkeydown="if(event.key==='Enter')searchMarkets()">
+        <button onclick="searchMarkets()">GO</button>
+      </div>
+      <div class="panel-body" id="markets-body">
+        <div class="shimmer"></div><div class="shimmer"></div><div class="shimmer" style="height:50px"></div>
+      </div>
+    </div>
+
+    <!-- Kalshi tab -->
+    <div class="tab-content" id="tab-kalshi">
+      <div class="panel-search">
+        <input type="text" id="kalshi-search" placeholder="Search Kalshi..." onkeydown="if(event.key==='Enter')searchKalshi()">
+        <button onclick="searchKalshi()">GO</button>
+      </div>
+      <div class="panel-body" id="kalshi-body">
+        <div class="shimmer"></div><div class="shimmer"></div>
+      </div>
+    </div>
+
+    <!-- Alerts tab -->
+    <div class="tab-content" id="tab-alerts">
+      <div class="alert-form">
+        <div class="alert-form-title">// NEW ALERT</div>
+        <input class="alert-input" id="al-slug" placeholder="Market slug / keyword (e.g. trump)">
+        <input class="alert-input" id="al-label" placeholder="Outcome label (e.g. Yes)">
+        <div class="alert-row">
+          <input class="alert-input" id="al-thresh" type="number" min="0" max="100" placeholder="% threshold (e.g. 65)">
+          <select class="alert-select" id="al-dir">
+            <option value="above">ABOVE</option>
+            <option value="below">BELOW</option>
+          </select>
+          <button class="btn-add-alert" onclick="addAlert()">+ ADD</button>
+        </div>
+      </div>
+      <div class="panel-body" id="alerts-body">
+        <div class="empty-state">No alerts set</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CENTER: Chat -->
+  <div id="chat-panel">
+    <div id="chat-header">
+      <span class="chat-title">// Intelligence Feed</span>
+      <button class="btn-clear" onclick="clearHistory()">CLEAR HISTORY</button>
+    </div>
+    <div id="messages">
+      <div id="welcome">
+        <h2>// ORACLE ONLINE</h2>
+        <p>Live context from Polymarket, Kalshi + current news injected automatically.</p>
+        <div class="suggestions">
+          <button class="suggestion-btn" onclick="suggest(this)">What are the biggest market movers today?</button>
+          <button class="suggestion-btn" onclick="suggest(this)">Compare Polymarket vs Kalshi on the same events</button>
+          <button class="suggestion-btn" onclick="suggest(this)">Summarize the top news and what markets say about it</button>
+          <button class="suggestion-btn" onclick="suggest(this)">Which bets have the most 24h volume right now?</button>
+        </div>
+      </div>
+    </div>
+    <div id="input-area">
+      <div class="input-row">
+        <textarea id="user-input" placeholder="Ask about markets, news, events..." rows="1"
+          onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+        <button id="send-btn" onclick="sendMessage()">SEND →</button>
+      </div>
+      <div class="input-hint">ENTER to send · SHIFT+ENTER for newline</div>
+    </div>
+  </div>
+
+  <!-- RIGHT: News / RSS / Reddit / Calendar / Shifts -->
+  <div class="panel">
+    <div class="panel-tabs">
+      <button class="tab-btn active" onclick="switchRightTab('news', this)">NEWS</button>
+      <button class="tab-btn" onclick="switchRightTab('rss', this)">RSS</button>
+      <button class="tab-btn" onclick="switchRightTab('reddit', this)">REDDIT</button>
+      <button class="tab-btn" onclick="switchRightTab('calendar', this)">CAL</button>
+      <button class="tab-btn" onclick="switchRightTab('shifts', this)">SHIFTS <span id="shifts-badge"></span></button>
+    </div>
+
+    <!-- News tab -->
+    <div class="tab-content active" id="rtab-news">
+      <div class="panel-search">
+        <input type="text" id="news-search" placeholder="Search news..." onkeydown="if(event.key==='Enter')searchNews()">
+        <button onclick="searchNews()">GO</button>
+      </div>
+      <div class="panel-body" id="news-body">
+        <div class="shimmer"></div><div class="shimmer" style="height:50px"></div><div class="shimmer"></div>
+      </div>
+    </div>
+
+    <!-- RSS tab -->
+    <div class="tab-content" id="rtab-rss">
+      <div class="panel-search">
+        <input type="text" id="rss-search" placeholder="Filter RSS..." onkeydown="if(event.key==='Enter')searchRSS()">
+        <button onclick="searchRSS()">GO</button>
+      </div>
+      <div class="panel-body" id="rss-body">
+        <div class="shimmer"></div><div class="shimmer"></div>
+      </div>
+    </div>
+
+    <!-- Reddit tab -->
+    <div class="tab-content" id="rtab-reddit">
+      <div class="panel-search">
+        <input type="text" id="reddit-search" placeholder="Search Reddit..." onkeydown="if(event.key==='Enter')searchReddit()">
+        <button onclick="searchReddit()">GO</button>
+      </div>
+      <div class="panel-body" id="reddit-body">
+        <div class="shimmer"></div><div class="shimmer"></div>
+      </div>
+    </div>
+
+    <!-- Calendar tab -->
+    <div class="tab-content" id="rtab-calendar">
+      <div class="panel-search">
+        <input type="text" id="cal-search" placeholder="Search events..." onkeydown="if(event.key==='Enter')searchCalendar()">
+        <button onclick="searchCalendar()">GO</button>
+      </div>
+      <div class="panel-body" id="calendar-body">
+        <div class="shimmer"></div><div class="shimmer"></div>
+      </div>
+    </div>
+
+    <!-- Shifts tab -->
+    <div class="tab-content" id="rtab-shifts">
+      <div class="panel-body" id="shifts-body">
+        <div class="empty-state">No shifts detected yet.<br>Refreshes detect moves &gt;5pts.</div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /#main -->
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+let chatHistory   = [];
+let isLoading    = false;
+let isDark       = true;
+let watchlistSlugs = new Set();
+
+// ── Clock ──────────────────────────────────────────────────────────────────
+setInterval(() => {
+  document.getElementById('live-time').textContent =
+    new Date().toLocaleTimeString('en-US', {hour12:false});
+}, 1000);
+
+// ── Theme ──────────────────────────────────────────────────────────────────
+function toggleTheme() {
+  isDark = !isDark;
+  document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+  document.getElementById('theme-btn').textContent = isDark ? '◑ LIGHT' : '◑ DARK';
+  // Persist preference
+  localStorage.setItem('oracle-theme', isDark ? 'dark' : 'light');
+}
+
+// Load saved theme on startup
+(function() {
+  const saved = localStorage.getItem('oracle-theme');
+  if (saved === 'light') {
+    isDark = false;
+    document.documentElement.setAttribute('data-theme', 'light');
+    // Button label updated after DOM ready
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('theme-btn').textContent = '◑ DARK';
+    });
+  }
+})();
+
+// ── Tab switching ──────────────────────────────────────────────────────────
+function switchLeftTab(name, btn) {
+  const panel = btn.closest('.panel');
+  panel.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  panel.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+async function init() {
+  try {
+    const res  = await fetch('/api/init');
+    const data = await res.json();
+    chatHistory = data.history || [];
+    const wl = data.watchlist || [];
+    watchlistSlugs = new Set(wl.map(w => w.slug));
+    renderMarkets(data.poly_markets   || [], 'markets-body', 'poly');
+    renderMarkets(data.kalshi_markets || [], 'kalshi-body',  'kalshi');
+    renderNews(data.headlines || []);
+    renderAlerts(data.alerts || []);
+    renderHistory();
+    setLastUpdated(data.last_updated);
+    handleFiredAlerts(data.fired_alerts || []);
+    renderShifts(data.shifts || []);
+    renderShifts(data.shifts || []);
+    checkHealth();
+  } catch(e) { console.error('Init error:', e); }
+}
+
+function setLastUpdated(ts) {
+  if (!ts) return;
+  document.getElementById('last-updated').textContent =
+    `Updated ${new Date(ts).toLocaleTimeString('en-US',{hour12:false})}`;
+}
+
+// ── Refresh ────────────────────────────────────────────────────────────────
+async function refreshData() {
+  const btn = document.getElementById('refresh-btn');
+  btn.textContent = '⟳ ...'; btn.disabled = true;
+  try {
+    const res  = await fetch('/api/refresh', {method:'POST'});
+    const data = await res.json();
+    renderMarkets(data.poly_markets   || [], 'markets-body', 'poly');
+    renderMarkets(data.kalshi_markets || [], 'kalshi-body',  'kalshi');
+    renderNews(data.headlines || []);
+    setLastUpdated(data.last_updated);
+    handleFiredAlerts(data.fired_alerts || []);
+    renderShifts(data.shifts || []);
+  } catch(e) {}
+  btn.textContent = '⟳ REFRESH'; btn.disabled = false;
+}
+
+// ── Render Markets ─────────────────────────────────────────────────────────
+function fmtVol(v) {
+  v = parseFloat(v||0);
+  if (v>=1e6) return `$${(v/1e6).toFixed(2)}M`;
+  if (v>=1e3) return `$${(v/1e3).toFixed(1)}K`;
+  return `$${v.toFixed(0)}`;
+}
+
+function deltaHtml(delta) {
+  if (delta === null || delta === undefined) return '';
+  if (delta > 0)  return '<span class="delta up">▲' + delta.toFixed(1) + '</span>';
+  if (delta < 0)  return '<span class="delta down">▼' + Math.abs(delta).toFixed(1) + '</span>';
+  return '<span class="delta flat">—</span>';
+}
+
+function renderMarkets(markets, bodyId, source) {
+  const body = document.getElementById(bodyId);
+  if (!markets.length) {
+    body.innerHTML = '<div class="empty-state">No markets found</div>'; return;
+  }
+  body.innerHTML = markets.map(m => {
+    const bars = (m.pairs||[]).map(p => {
+      const lc  = p.label.toLowerCase();
+      const cls = lc.startsWith('yes') ? 'fill-yes' : lc.startsWith('no') ? 'fill-no' : 'fill-other';
+      const pc  = p.prob>=60?'hi':p.prob<=30?'lo':'mi';
+      const dh  = deltaHtml(p.delta);
+      return '<div class="prob-row">' +
+        '<div class="prob-label-row">' +
+          '<span class="prob-label">' + p.label + dh + '</span>' +
+          '<span class="prob-pct ' + pc + '">' + p.prob + '%</span>' +
+        '</div>' +
+        '<div class="prob-bar-track"><div class="prob-bar-fill ' + cls + '" style="width:' + p.prob + '%"></div></div>' +
+      '</div>';
+    }).join('');
+
+    const srcTag   = source === 'kalshi'
+      ? '<span class="market-source-tag source-kalshi">KALSHI</span>'
+      : '<span class="market-source-tag source-poly">POLYMARKET</span>';
+    const linkHref = source === 'kalshi'
+      ? 'https://kalshi.com/markets/' + m.slug
+      : 'https://polymarket.com/event/' + m.slug;
+    const isPinned = watchlistSlugs.has(m.slug||'');
+    const pinned   = m.pinned || isPinned;
+    const safeQ    = (m.question||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    const safeSlug = (m.slug||'').replace(/'/g,"\\'");
+
+    return '<div class="market-card' + (pinned?' pinned-card':'') + '" onclick="askAbout(\'' + safeQ + '\')">' +
+      srcTag +
+      '<div class="market-q">' + m.question + '</div>' +
+      '<div class="market-vol">24H VOL: <span>' + fmtVol(m.volume24h) + '</span></div>' +
+      '<div class="prob-bars">' + bars + '</div>' +
+      '<div class="market-actions">' +
+        '<div style="display:flex;gap:6px;align-items:center">' +
+        (m.slug ? '<a class="market-link" href="' + linkHref + '" target="_blank" onclick="event.stopPropagation()">→ VIEW</a>' : '') +
+        '<button class="btn-rabbithole" onclick="event.stopPropagation();rabbitHole(\'' + safeQ + '\')" title="Research this market">🐇 DIG</button>' +
+        '</div>' +
+        '<button class="btn-pin' + (isPinned?' pinned':'') + '" title="' + (isPinned?'Unpin from watchlist':'Pin to watchlist') + '" ' +
+          'onclick="event.stopPropagation();toggleWatchlist(\'' + safeSlug + '\',\'' + safeQ + '\',\'' + source + '\',this)">' +
+          (isPinned?'📌':'📍') +
+        '</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+async function searchMarkets() {
+  const q = document.getElementById('market-search').value.trim();
+  document.getElementById('markets-body').innerHTML = '<div class="shimmer"></div><div class="shimmer"></div>';
+  const res  = await fetch(`/api/markets?source=poly${q?'&q='+encodeURIComponent(q):''}`);
+  const data = await res.json();
+  renderMarkets(data.poly||[], 'markets-body', 'poly');
+}
+
+async function searchKalshi() {
+  const q = document.getElementById('kalshi-search').value.trim();
+  document.getElementById('kalshi-body').innerHTML = '<div class="shimmer"></div><div class="shimmer"></div>';
+  const res  = await fetch(`/api/markets?source=kalshi${q?'&q='+encodeURIComponent(q):''}`);
+  const data = await res.json();
+  renderMarkets(data.kalshi||[], 'kalshi-body', 'kalshi');
+}
+
+function askAbout(question) {
+  document.getElementById('user-input').value = `Tell me more about: "${question}"`;
+  document.getElementById('user-input').focus();
+}
+
+// ── News ───────────────────────────────────────────────────────────────────
+function renderNews(articles) {
+  document.getElementById('news-count').textContent = articles.length;
+  const body = document.getElementById('news-body');
+  if (!articles.length) { body.innerHTML='<div class="empty-state">No articles</div>'; return; }
+  body.innerHTML = articles.map(a => `
+    <div class="news-card">
+      <div class="news-meta"><span>${(a.source||'').toUpperCase()}</span><span class="news-date">${a.publishedAt||''}</span></div>
+      <a class="news-title" href="${a.url}" target="_blank">${a.title}</a>
+    </div>`).join('');
+}
+
+async function searchNews() {
+  const q = document.getElementById('news-search').value.trim();
+  document.getElementById('news-body').innerHTML = '<div class="shimmer"></div><div class="shimmer"></div>';
+  const res  = await fetch(`/api/news${q?'?q='+encodeURIComponent(q):''}`);
+  renderNews(await res.json());
+}
+
+// ── Alerts ─────────────────────────────────────────────────────────────────
+function renderAlerts(alerts) {
+  const body = document.getElementById('alerts-body');
+  const tab  = document.getElementById('alert-count-tab');
+  tab.textContent = alerts.length ? `(${alerts.length})` : '';
+  if (!alerts.length) { body.innerHTML='<div class="empty-state">No alerts set</div>'; return; }
+  body.innerHTML = alerts.map(a => `
+    <div class="alert-card ${a.fired?'fired':''}">
+      <div class="alert-info">
+        <div class="alert-question">${a.slug} · ${a.label} ${a.direction} ${a.threshold}%</div>
+        <div class="alert-meta">${a.fired?'<span class="fired-tag">⚡ FIRED</span>':''} ${a.created?.slice(0,10)||''}</div>
+      </div>
+      <button class="btn-del-alert" onclick="deleteAlert('${a.id}')">✕</button>
+    </div>`).join('');
+}
+
+function handleFiredAlerts(fired) {
+  if (!fired.length) return;
+  const banner = document.getElementById('alert-banner');
+  banner.textContent = `⚠ ${fired.length} ALERT${fired.length>1?'S':''} TRIGGERED — ${fired[0].market?.slice(0,40)}`;
+  banner.classList.add('visible');
+  // Browser notification
+  if (Notification.permission === 'granted') {
+    fired.forEach(f => new Notification('ORACLE Alert', {
+      body: `${f.market}\n${f.label}: ${f.current_prob}%`
+    }));
+  }
+}
+
+async function addAlert() {
+  const slug   = document.getElementById('al-slug').value.trim();
+  const label  = document.getElementById('al-label').value.trim();
+  const thresh = parseFloat(document.getElementById('al-thresh').value);
+  const dir    = document.getElementById('al-dir').value;
+  if (!slug || !label || isNaN(thresh)) { alert('Fill in all alert fields'); return; }
+  const res = await fetch('/api/alerts', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({slug, label, threshold: thresh, direction: dir})
+  });
+  const a = await res.json();
+  if (a.error) { alert(a.error); return; }
+  document.getElementById('al-slug').value = '';
+  document.getElementById('al-label').value = '';
+  document.getElementById('al-thresh').value = '';
+  const alerts = await (await fetch('/api/alerts')).json();
+  renderAlerts(alerts);
+  // Request notification permission
+  if (Notification.permission === 'default') Notification.requestPermission();
+}
+
+async function deleteAlert(id) {
+  await fetch(`/api/alerts/${id}`, {method:'DELETE'});
+  const alerts = await (await fetch('/api/alerts')).json();
+  renderAlerts(alerts);
+}
+
+// ── Chat ───────────────────────────────────────────────────────────────────
+function renderHistory() {
+  if (!chatHistory.length) return;
+  document.getElementById('welcome')?.remove();
+  chatHistory.forEach(m => appendMessage(m.role, m.content, false));
+  scrollToBottom();
+}
+
+function appendMessage(role, content, animate=true) {
+  document.getElementById('welcome')?.remove();
+  const msgs = document.getElementById('messages');
+  const div  = document.createElement('div');
+  div.className = `msg ${role}`;
+  div.innerHTML = `
+    <div class="msg-label">${role==='user'?'YOU':'ORACLE'}</div>
+    <div class="msg-bubble">${escHtml(content)}</div>`;
+  if (!animate) div.style.animation = 'none';
+  msgs.appendChild(div);
+  scrollToBottom();
+  return div.querySelector('.msg-bubble');
+}
+
+function showTyping() {
+  document.getElementById('welcome')?.remove();
+  const msgs = document.getElementById('messages');
+  const div  = document.createElement('div');
+  div.className = 'msg bot'; div.id = 'typing';
+  div.innerHTML = `<div class="msg-label">ORACLE</div>
+    <div class="typing-indicator">
+      <div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>
+    </div>`;
+  msgs.appendChild(div); scrollToBottom();
+}
+function removeTyping() { document.getElementById('typing')?.remove(); }
+
+async function sendMessage() {
+  const input = document.getElementById('user-input');
+  const text  = input.value.trim();
+  if (!text || isLoading) return;
+
+  isLoading = true;
+  input.value = ''; input.style.height = 'auto';
+  document.getElementById('send-btn').disabled = true;
+
+  appendMessage('user', text);
+  showTyping();
+
+  try {
+    // Use streaming
+    const res = await fetch('/api/chat', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({message: text, history: chatHistory, stream: true})
+    });
+
+    removeTyping();
+    // Create bot bubble for streaming
+    document.getElementById('welcome')?.remove();
+    const msgs  = document.getElementById('messages');
+    const div   = document.createElement('div');
+    div.className = 'msg bot';
+    div.innerHTML = `<div class="msg-label">ORACLE</div><div class="msg-bubble"></div>`;
+    msgs.appendChild(div);
+    const bubble = div.querySelector('.msg-bubble');
+
+    const reader  = res.body.getReader();
+    const decoder = new TextDecoder();
+    let raw = '';
+
+    while (true) {
+      const {value, done} = await reader.read();
+      if (done) break;
+      raw += decoder.decode(value, {stream: true});
+      const lines = raw.split('\n');
+      raw = lines.pop(); // keep incomplete line
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        try {
+          const d = JSON.parse(line.slice(6));
+          if (d.token)   { bubble.textContent += d.token; scrollToBottom(); }
+          if (d.done)    { chatHistory = d.history; }
+          if (d.error)   { bubble.textContent = `Error: ${d.error}`; }
+        } catch {}
+      }
+    }
+  } catch(e) {
+    removeTyping();
+    appendMessage('bot', 'Connection error. Is the server running?');
+  }
+
+  isLoading = false;
+  document.getElementById('send-btn').disabled = false;
+  input.focus();
+}
+
+async function clearHistory() {
+  if (!confirm('Clear chat history?')) return;
+  await fetch('/api/clear', {method:'POST'});
+  chatHistory = [];
+  document.getElementById('messages').innerHTML = `
+    <div id="welcome">
+      <h2>// ORACLE ONLINE</h2>
+      <p>History cleared.</p>
+      <div class="suggestions">
+        <button class="suggestion-btn" onclick="suggest(this)">What are the biggest market movers today?</button>
+        <button class="suggestion-btn" onclick="suggest(this)">Which Polymarket bets have the most 24h volume?</button>
+        <button class="suggestion-btn" onclick="suggest(this)">Compare Polymarket and Kalshi on the same events</button>
+      </div>
+    </div>`;
+}
+
+function suggest(btn) { document.getElementById('user-input').value = btn.textContent; sendMessage(); }
+function handleKey(e) { if (e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();} }
+function autoResize(el) { el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,120)+'px'; }
+function scrollToBottom() { const m=document.getElementById('messages'); m.scrollTop=m.scrollHeight; }
+function escHtml(t) { return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ── Health check ────────────────────────────────────────────────────────────
+async function checkHealth() {
+  try {
+    const res = await fetch('/api/health');
+    const h   = await res.json();
+    const set  = (id, ok) => {
+      const el = document.getElementById(id);
+      if (el) { el.className = 'hdot ' + (ok ? 'ok' : 'err'); }
+    };
+    set('h-ollama', h.ollama?.ok);
+    set('h-news',   h.news_api?.ok);
+    set('h-poly',   h.polymarket?.ok);
+    set('h-kalshi', h.kalshi?.ok);
+  } catch(e) {}
+}
+setInterval(checkHealth, 60000);
+
+// ── Watchlist ────────────────────────────────────────────────────────────────
+async function toggleWatchlist(slug, question, source, btn) {
+  if (watchlistSlugs.has(slug)) {
+    await fetch('/api/watchlist/' + encodeURIComponent(slug), {method:'DELETE'});
+    watchlistSlugs.delete(slug);
+    btn.textContent = '📍';
+    btn.classList.remove('pinned');
+    btn.title = 'Pin to watchlist';
+    btn.closest('.market-card').classList.remove('pinned-card');
+  } else {
+    await fetch('/api/watchlist', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({slug, question, source})
+    });
+    watchlistSlugs.add(slug);
+    btn.textContent = '📌';
+    btn.classList.add('pinned');
+    btn.title = 'Unpin from watchlist';
+    btn.closest('.market-card').classList.add('pinned-card');
+  }
+}
+
+// ── Export ────────────────────────────────────────────────────────────────────
+function exportChat() {
+  window.location.href = '/api/export';
+}
+
+
+// ── Right panel tab switching ─────────────────────────────────────────────────
+function switchRightTab(name, btn) {
+  const panel = btn.closest('.panel');
+  panel.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  panel.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('rtab-' + name).classList.add('active');
+  // Lazy-load on first visit
+  if (name === 'rss'      && !document.getElementById('rss-body').dataset.loaded)      loadRSS();
+  if (name === 'reddit'   && !document.getElementById('reddit-body').dataset.loaded)   loadReddit();
+  if (name === 'calendar' && !document.getElementById('calendar-body').dataset.loaded) loadCalendar();
+}
+
+// ── RSS ───────────────────────────────────────────────────────────────────────
+function renderRSS(items) {
+  const body = document.getElementById('rss-body');
+  body.dataset.loaded = '1';
+  if (!items.length) { body.innerHTML = '<div class="empty-state">No feeds available</div>'; return; }
+  body.innerHTML = items.map(a => `
+    <div class="rss-card">
+      <div class="rss-meta"><span class="rss-source">${(a.source||'').toUpperCase()}</span><span class="rss-date">${a.publishedAt||''}</span></div>
+      <a class="rss-title" href="${a.url}" target="_blank">${a.title}</a>
+    </div>`).join('');
+}
+async function loadRSS() {
+  document.getElementById('rss-body').innerHTML = '<div class="shimmer"></div><div class="shimmer"></div>';
+  const res = await fetch('/api/rss');
+  renderRSS(await res.json());
+}
+async function searchRSS() {
+  const q = document.getElementById('rss-search').value.trim();
+  document.getElementById('rss-body').innerHTML = '<div class="shimmer"></div>';
+  const res = await fetch('/api/rss' + (q ? '?q=' + encodeURIComponent(q) : ''));
+  renderRSS(await res.json());
+}
+
+// ── Reddit ────────────────────────────────────────────────────────────────────
+function renderReddit(posts) {
+  const body = document.getElementById('reddit-body');
+  body.dataset.loaded = '1';
+  if (!posts.length) { body.innerHTML = '<div class="empty-state">No posts found</div>'; return; }
+  body.innerHTML = posts.map(p => `
+    <div class="reddit-card">
+      <div class="reddit-meta">
+        <span>r/${p.subreddit} · ${p.score.toLocaleString()} pts · ${p.comments} comments</span>
+        <span class="sentiment ${p.sentiment}">${p.sentiment.toUpperCase()}</span>
+      </div>
+      <a class="reddit-title" href="${p.url}" target="_blank">${p.title}</a>
+    </div>`).join('');
+}
+async function loadReddit() {
+  document.getElementById('reddit-body').innerHTML = '<div class="shimmer"></div><div class="shimmer"></div>';
+  const res = await fetch('/api/reddit');
+  renderReddit(await res.json());
+}
+async function searchReddit() {
+  const q = document.getElementById('reddit-search').value.trim();
+  if (!q) return;
+  document.getElementById('reddit-body').innerHTML = '<div class="shimmer"></div>';
+  const res = await fetch('/api/reddit?q=' + encodeURIComponent(q));
+  renderReddit(await res.json());
+}
+
+// ── Calendar ──────────────────────────────────────────────────────────────────
+function renderCalendar(events) {
+  const body = document.getElementById('calendar-body');
+  body.dataset.loaded = '1';
+  if (!events.length) { body.innerHTML = '<div class="empty-state">No events found</div>'; return; }
+  body.innerHTML = events.map(e => `
+    <div class="cal-card${e.past?' past':''}">
+      <div class="cal-icon">${e.icon}</div>
+      <div class="cal-info">
+        <div class="cal-title">${e.title}</div>
+        <div class="cal-meta">
+          <span>${e.date}</span>
+          <span class="cal-label ${e.impact}">${e.label}</span>
+          <span>${e.impact.toUpperCase()}</span>
+        </div>
+      </div>
+    </div>`).join('');
+}
+async function loadCalendar() {
+  document.getElementById('calendar-body').innerHTML = '<div class="shimmer"></div><div class="shimmer"></div>';
+  const res = await fetch('/api/calendar');
+  renderCalendar(await res.json());
+}
+async function searchCalendar() {
+  const q = document.getElementById('cal-search').value.trim();
+  document.getElementById('calendar-body').innerHTML = '<div class="shimmer"></div>';
+  const res = await fetch('/api/calendar' + (q ? '?q=' + encodeURIComponent(q) : ''));
+  renderCalendar(await res.json());
+}
+
+// ── Shifts ────────────────────────────────────────────────────────────────────
+function renderShifts(shifts) {
+  const body  = document.getElementById('shifts-body');
+  const badge = document.getElementById('shifts-badge');
+  badge.textContent = shifts.length ? '(' + shifts.length + ')' : '';
+  if (!shifts.length) {
+    body.innerHTML = '<div class="empty-state">No shifts detected yet.<br>Refreshes detect moves &gt;5pts.</div>';
+    return;
+  }
+  body.innerHTML = shifts.map(s => `
+    <div class="shift-card ${s.direction}">
+      <div class="shift-arrow">${s.direction === 'up' ? '▲' : '▼'}</div>
+      <div class="shift-info">
+        <div class="shift-market">${s.market}</div>
+        <div class="shift-meta">${s.label} · ${s.source.toUpperCase()} · ${s.timestamp.slice(0,16).replace('T',' ')}</div>
+      </div>
+      <div class="shift-prob ${s.direction}">${s.delta > 0 ? '+' : ''}${s.delta}pts → ${s.prob}%</div>
+    </div>`).join('');
+}
+
+// ── Rabbit Hole ───────────────────────────────────────────────────────────────
+async function rabbitHole(question) {
+  // Switch to chat and send a briefing request
+  document.getElementById('user-input').value =
+    'Give me a full briefing on: "' + question + '". Include what Reddit is saying, relevant news, and any upcoming calendar events that could affect this.';
+  // Also fetch and show in a notification
+  const res  = await fetch('/api/rabbithole?q=' + encodeURIComponent(question));
+  const data = await res.json();
+  // Populate reddit tab with results
+  if (data.reddit?.posts?.length) {
+    renderReddit(data.reddit.posts);
+    document.getElementById('reddit-body').dataset.loaded = '1';
+  }
+  if (data.rss?.length) {
+    renderRSS(data.rss);
+    document.getElementById('rss-body').dataset.loaded = '1';
+  }
+  if (data.calendar?.length) {
+    renderCalendar(data.calendar);
+    document.getElementById('calendar-body').dataset.loaded = '1';
+  }
+  // Send the chat message
+  sendMessage();
+}
+
+
+init();
+</script>
+</body>
+</html>
